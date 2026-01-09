@@ -5,7 +5,7 @@ services:
     runtime: node
     env: node
     region: oregon
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: node backend/src/server.js
     envVars:
