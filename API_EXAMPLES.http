@@ -1,0 +1,344 @@
+// Postman/Thunder Client Collection for FarmLokal API
+
+// ========================================
+// PRODUCT ENDPOINTS - CURSOR-BASED PAGINATION
+// ========================================
+
+// 1. Get All Products (First Page - Default)
+GET http://localhost:5000/api/products
+
+###
+
+// 2. Get First Page with Custom Limit
+GET http://localhost:5000/api/products?limit=20
+
+###
+
+// 3. Cursor-Based Pagination - Next Page
+// Use the nextCursor from previous response
+GET http://localhost:5000/api/products?cursor=eyJpZCI6MjAsInNvcnRWYWx1ZSI6IjIwMjYtMDEtMDlUMDA6MDA6MDAuMDAwWiJ9&limit=20
+
+###
+
+// 4. Cursor-Based Pagination - Previous Page (Backward)
+// Use prevCursor with direction=backward
+GET http://localhost:5000/api/products?cursor=eyJpZCI6MjAsInNvcnRWYWx1ZSI6IjIwMjYtMDEtMDlUMDA6MDA6MDAuMDAwWiJ9&direction=backward&limit=20
+
+###
+
+// 5. Search Products with Pagination
+GET http://localhost:5000/api/products?search=tomato&limit=15
+
+###
+
+// 6. Filter by Category with Pagination
+GET http://localhost:5000/api/products?category=Vegetables&limit=25
+
+###
+
+// 7. Filter by Price Range
+GET http://localhost:5000/api/products?minPrice=10&maxPrice=50&limit=30
+
+###
+
+// 8. Sort by Price (Ascending) with Cursor
+GET http://localhost:5000/api/products?sortBy=price&sortOrder=ASC&limit=20
+
+###
+
+// 9. Sort by Price (Descending) - Next Page
+GET http://localhost:5000/api/products?cursor=PASTE_CURSOR_HERE&sortBy=price&sortOrder=DESC&limit=20
+
+###
+
+// 10. Sort by Name (Ascending)
+GET http://localhost:5000/api/products?sortBy=name&sortOrder=ASC&limit=15
+
+###
+
+// 11. Sort by Date (Newest First)
+GET http://localhost:5000/api/products?sortBy=created_at&sortOrder=DESC&limit=25
+
+###
+
+// 12. Complex Query - Category + Price + Search + Sort + Pagination
+GET http://localhost:5000/api/products?category=Fruits&minPrice=5&maxPrice=30&search=apple&sortBy=price&sortOrder=ASC&limit=25
+
+###
+
+// 13. Complex Query - Next Page with Filters
+GET http://localhost:5000/api/products?cursor=PASTE_CURSOR_HERE&category=Fruits&minPrice=5&maxPrice=30&search=apple&sortBy=price&sortOrder=ASC&limit=25
+
+###
+
+// 14. Get Single Product
+GET http://localhost:5000/api/products/1
+
+###
+
+// 15. Get Product Statistics
+GET http://localhost:5000/api/products/meta/stats
+
+###
+
+// 16. Create Product
+POST http://localhost:5000/api/products
+Content-Type: application/json
+
+{
+  "name": "Fresh Organic Tomatoes",
+  "description": "Locally grown organic tomatoes",
+  "price": 25.99,
+  "category": "Vegetables",
+  "stock": 150,
+  "image_url": "https://via.placeholder.com/300x200?text=Tomatoes"
+}
+
+###
+
+// 17. Update Product
+PUT http://localhost:5000/api/products/1
+Content-Type: application/json
+
+{
+  "price": 29.99,
+  "stock": 175
+}
+
+// ========================================
+// EXTERNAL API ENDPOINTS
+// ========================================
+
+// 13. Call External API A (Get Posts)
+GET http://localhost:5000/api/external/data?endpoint=/posts
+
+// 14. Call External API A (Get Users)
+GET http://localhost:5000/api/external/data?endpoint=/users
+
+// 15. Get Circuit Breaker Statistics
+GET http://localhost:5000/api/external/stats
+
+// ========================================
+// WEBHOOK ENDPOINTS
+// ========================================
+
+// 16. Receive Webhook Callback
+POST http://localhost:5000/api/webhooks/callback
+Content-Type: application/json
+
+{
+  "id": "event-12345",
+  "type": "order.created",
+  "timestamp": "2026-01-08T10:00:00Z",
+  "data": {
+    "orderId": "ORD-001",
+    "customerId": "CUST-123",
+    "amount": 150.00,
+    "items": [
+      {
+        "productId": 1,
+        "quantity": 5
+      }
+    ]
+  }
+}
+
+// 17. Test Webhook Idempotency (Send same event twice)
+POST http://localhost:5000/api/webhooks/callback
+Content-Type: application/json
+
+{
+  "id": "event-duplicate-test",
+  "type": "test.event",
+  "data": {
+    "message": "This is a test"
+  }
+}
+
+// 18. Register Webhook Callback URL
+POST http://localhost:5000/api/webhooks/register
+Content-Type: application/json
+
+{
+  "callbackUrl": "http://localhost:5000/api/webhooks/callback"
+}
+
+// ========================================
+// HEALTH & MONITORING
+// ========================================
+
+// 19. Health Check
+GET http://localhost:5000/health
+
+// ========================================
+// MOCK OAUTH SERVER
+// ========================================
+
+// 20. Get OAuth2 Access Token
+POST http://localhost:5001/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id=test-client&client_secret=test-secret&scope=read:products
+
+// 21. Verify OAuth2 Token
+GET http://localhost:5001/oauth/verify
+Authorization: Bearer <your-token-here>
+
+// ========================================
+// PERFORMANCE TESTING QUERIES
+// ========================================
+
+// 22. Heavy Load Test Query (Large Result Set)
+GET http://localhost:5000/api/products?limit=100
+
+// 23. Cache Test (First call - miss, second call - hit)
+GET http://localhost:5000/api/products?category=Vegetables&limit=50
+
+// 24. Complex Filter Performance Test
+GET http://localhost:5000/api/products?category=Fruits&minPrice=15&maxPrice=45&search=apple&sortBy=price&sortOrder=DESC&limit=50
+
+// ========================================
+// ERROR TESTING
+// ========================================
+
+// 25. Invalid Product ID
+GET http://localhost:5000/api/products/999999999
+
+// 26. Invalid Query Parameters
+GET http://localhost:5000/api/products?sortBy=invalid_column&limit=1000
+
+// 27. Invalid Webhook (Missing ID)
+POST http://localhost:5000/api/webhooks/callback
+Content-Type: application/json
+
+{
+  "type": "test.event",
+  "data": {}
+}
+
+// ========================================
+// PAGINATION TESTING
+// ========================================
+
+// 28. First Page
+GET http://localhost:5000/api/products?limit=10
+
+// 29. Second Page (Use nextCursor from previous response)
+GET http://localhost:5000/api/products?limit=10&cursor=11
+
+// 30. Third Page
+GET http://localhost:5000/api/products?limit=10&cursor=21
+
+// ========================================
+// RATE LIMITING TEST
+// ========================================
+
+// 31. Rate Limit Test (Run this 101 times to trigger rate limit)
+// Default: 100 requests per minute
+GET http://localhost:5000/api/products
+
+// ========================================
+// CONCURRENT REQUEST TEST
+// ========================================
+
+// 32-36. Run these simultaneously to test OAuth2 token caching
+// Should only trigger ONE token fetch
+GET http://localhost:5000/api/external/data?endpoint=/posts
+GET http://localhost:5000/api/external/data?endpoint=/posts
+GET http://localhost:5000/api/external/data?endpoint=/posts
+GET http://localhost:5000/api/external/data?endpoint=/posts
+GET http://localhost:5000/api/external/data?endpoint=/posts
+
+// ========================================
+// CURL COMMANDS (for terminal testing)
+// ========================================
+
+/*
+
+# Basic product fetch
+curl http://localhost:5000/api/products
+
+# Search with filters
+curl "http://localhost:5000/api/products?search=tomato&category=Vegetables&minPrice=10"
+
+# Create product
+curl -X POST http://localhost:5000/api/products \
+  -H "Content-Type: application/json" \
+  -d '{"name":"New Product","price":19.99,"category":"Fruits","stock":100}'
+
+# Send webhook
+curl -X POST http://localhost:5000/api/webhooks/callback \
+  -H "Content-Type: application/json" \
+  -d '{"id":"evt-123","type":"test","data":{}}'
+
+# Get OAuth token
+curl -X POST http://localhost:5001/oauth/token \
+  -d "grant_type=client_credentials&client_id=test&client_secret=secret"
+
+# Test rate limiting (bash loop)
+for i in {1..101}; do curl -s http://localhost:5000/api/products > /dev/null; echo "Request $i"; done
+
+# Performance benchmark (requires Apache Bench)
+ab -n 1000 -c 10 http://localhost:5000/api/products
+
+*/
+
+// ========================================
+// REDIS COMMANDS (for debugging)
+// ========================================
+
+/*
+
+redis-cli
+
+# Check cached OAuth token
+GET oauth2:access_token
+TTL oauth2:access_token
+
+# Check product cache
+KEYS products:query:*
+GET products:query:<hash>
+
+# Check webhook processed events
+KEYS webhook:processed_events:*
+GET webhook:processed_events:event-12345
+
+# Check rate limiting
+KEYS rl:*
+
+# Clear all caches
+FLUSHDB
+
+*/
+
+// ========================================
+// MYSQL COMMANDS (for debugging)
+// ========================================
+
+/*
+
+mysql -u root -p farmlokal
+
+-- Check product count
+SELECT COUNT(*) FROM products;
+
+-- Check product distribution by category
+SELECT category, COUNT(*) as count FROM products GROUP BY category;
+
+-- Check price range
+SELECT MIN(price), AVG(price), MAX(price) FROM products;
+
+-- Test query performance
+EXPLAIN SELECT * FROM products 
+WHERE category = 'Vegetables' 
+AND price BETWEEN 10 AND 50 
+ORDER BY price ASC 
+LIMIT 50;
+
+-- Check indexes
+SHOW INDEX FROM products;
+
+-- Find slow queries
+SELECT * FROM products WHERE name LIKE '%tomato%' LIMIT 10;
+
+*/
