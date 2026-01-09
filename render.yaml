@@ -33,21 +33,6 @@ services:
         fromDatabase:
           name: farmlokal-db
           property: database
-      - key: REDIS_HOST
-        fromService:
-          name: farmlokal-redis
-          type: redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          name: farmlokal-redis
-          type: redis
-          property: port
-      - key: REDIS_PASSWORD
-        fromService:
-          name: farmlokal-redis
-          type: redis
-          property: connectionString
     healthCheckPath: /health
 
   # Frontend Static Site
@@ -60,10 +45,7 @@ services:
     staticPublishPath: ./frontend/build
     envVars:
       - key: REACT_APP_API_URL
-        fromService:
-          name: farmlokal-backend
-          type: web
-          property: host
+        value: https://farmlokal-backend.onrender.com
     routes:
       - type: rewrite
         source: /*
@@ -75,12 +57,5 @@ databases:
     databaseName: farmlokal
     user: farmlokal_user
     region: oregon
-    plan: starter
-    ipAllowList: []
-
-# Redis Cache
-redis:
-  - name: farmlokal-redis
-    region: oregon
-    plan: starter
+    plan: free
     ipAllowList: []

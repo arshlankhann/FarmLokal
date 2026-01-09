@@ -5,31 +5,36 @@ let client = null;
 let isConnected = false;
 let connectionAttempted = false;
 
-// Only connect if Redis credentials are explicitly provided
+// Support both REDIS_URL (production) and individual vars (local dev)
+const redisUrl = process.env.REDIS_URL;
 const redisHost = process.env.REDIS_HOST;
 const redisPort = process.env.REDIS_PORT || 6379;
 const redisPassword = process.env.REDIS_PASSWORD;
 
-// Only attempt connection if REDIS_HOST is set
-if (redisHost) {
+// Only attempt connection if Redis is configured
+if (redisUrl || redisHost) {
   connectionAttempted = true;
   
-  client = redis.createClient({
-    socket: {
-      host: redisHost,
-      port: parseInt(redisPort),
-      connectTimeout: 5000,
-      reconnectStrategy: (retries) => {
-        // Stop retrying after 3 attempts
-        if (retries > 3) {
-          logger.warn('Redis connection failed after 3 attempts, disabling cache');
-          return false; // Stop reconnecting
-        }
-        return Math.min(retries * 100, 3000);
-      }
-    },
-    password: redisPassword || undefined
-  });
+  const redisConfig = redisUrl 
+    ? { url: redisUrl }
+    : {
+        socket: {
+          host: redisHost,
+          port: parseInt(redisPort),
+          connectTimeout: 5000,
+          reconnectStrategy: (retries) => {
+            // Stop retrying after 3 attempts
+            if (retries > 3) {
+              logger.warn('Redis connection failed after 3 attempts, disabling cache');
+              return false; // Stop reconnecting
+            }
+            return Math.min(retries * 100, 3000);
+          }
+        },
+        password: redisPassword || undefined
+      };
+  
+  client = redis.createClient(redisConfig);
 
   // Suppress error spam - just log once
   let errorLogged = false;
@@ -59,7 +64,7 @@ if (redisHost) {
     isConnected = false;
   });
 } else {
-  logger.info('Redis not configured (REDIS_HOST not set), running without cache');
+  logger.info('Redis not configured, running without cache');
 }
 
 // Wrapper functions with fallback
