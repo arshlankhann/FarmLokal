@@ -3,41 +3,63 @@ const logger = require('../utils/logger');
 
 let client = null;
 let isConnected = false;
+let connectionAttempted = false;
 
-// Only connect if Redis is configured
-const shouldConnectRedis = process.env.REDIS_HOST || process.env.NODE_ENV === 'production';
+// Only connect if Redis credentials are explicitly provided
+const redisHost = process.env.REDIS_HOST;
+const redisPort = process.env.REDIS_PORT || 6379;
+const redisPassword = process.env.REDIS_PASSWORD;
 
-if (shouldConnectRedis) {
+// Only attempt connection if REDIS_HOST is set
+if (redisHost) {
+  connectionAttempted = true;
+  
   client = redis.createClient({
     socket: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: process.env.REDIS_PORT || 6379,
-      connectTimeout: 5000
+      host: redisHost,
+      port: parseInt(redisPort),
+      connectTimeout: 5000,
+      reconnectStrategy: (retries) => {
+        // Stop retrying after 3 attempts
+        if (retries > 3) {
+          logger.warn('Redis connection failed after 3 attempts, disabling cache');
+          return false; // Stop reconnecting
+        }
+        return Math.min(retries * 100, 3000);
+      }
     },
-    password: process.env.REDIS_PASSWORD || undefined
+    password: redisPassword || undefined
   });
 
+  // Suppress error spam - just log once
+  let errorLogged = false;
   client.on('error', (err) => {
-    logger.error('Redis error:', err);
+    if (!errorLogged) {
+      logger.warn('Redis connection error, running without cache:', err.message);
+      errorLogged = true;
+    }
     isConnected = false;
   });
 
   client.on('connect', () => {
     logger.info('Redis connected successfully');
     isConnected = true;
+    errorLogged = false; // Reset error flag
   });
 
   client.on('disconnect', () => {
-    logger.warn('Redis disconnected');
+    logger.warn('Redis disconnected, cache unavailable');
     isConnected = false;
   });
 
+  // Attempt connection but don't crash if it fails
   client.connect().catch(err => {
-    logger.warn('Redis connection failed, running without cache:', err.message);
+    logger.warn('Redis unavailable, running without cache:', err.message);
     client = null;
+    isConnected = false;
   });
 } else {
-  logger.info('Redis not configured, running without cache');
+  logger.info('Redis not configured (REDIS_HOST not set), running without cache');
 }
 
 // Wrapper functions with fallback
