@@ -1,27 +1,24 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 const logger = require('../utils/logger');
 
-const pool = mysql.createPool({
+const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'root',
+  port: process.env.DB_PORT || 5432,
+  user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'farmlokal',
-  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
-  waitForConnections: true,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0
+  max: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // Test connection
-pool.getConnection()
-  .then(connection => {
-    logger.info('MySQL database connected successfully');
-    connection.release();
+pool.connect()
+  .then(client => {
+    logger.info('PostgreSQL database connected successfully');
+    client.release();
   })
   .catch(err => {
-    logger.error('MySQL connection error:', err);
+    logger.error('PostgreSQL connection error:', err);
   });
 
 module.exports = pool;
