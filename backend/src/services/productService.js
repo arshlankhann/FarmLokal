@@ -124,7 +124,6 @@ class ProductService {
     const params = [];
 
     // Advanced cursor-based pagination with sort column support
-    let paramIndex = 1;
     if (cursorData) {
       const { id, sortValue } = cursorData;
       
@@ -135,51 +134,51 @@ class ProductService {
       if (orderColumn === 'id') {
         // Simple ID-based cursor
         const operator = isForward ? '>' : '<';
-        query += ` AND p.id ${operator} $${paramIndex++}`;
+        query += ` AND p.id ${operator} ?`;
         params.push(id);
       } else {
         // Complex cursor with sort column + id for tie-breaking
         if (isForward) {
           if (isAscending) {
-            query += ` AND (p.${orderColumn} > $${paramIndex++} OR (p.${orderColumn} = $${paramIndex++} AND p.id > $${paramIndex++}))`;
+            query += ` AND (p.${orderColumn} > ? OR (p.${orderColumn} = ? AND p.id > ?))`;
             params.push(sortValue, sortValue, id);
           } else {
-            query += ` AND (p.${orderColumn} < $${paramIndex++} OR (p.${orderColumn} = $${paramIndex++} AND p.id > $${paramIndex++}))`;
+            query += ` AND (p.${orderColumn} < ? OR (p.${orderColumn} = ? AND p.id > ?))`;
             params.push(sortValue, sortValue, id);
           }
         } else {
           // Backward pagination
           if (isAscending) {
-            query += ` AND (p.${orderColumn} < $${paramIndex++} OR (p.${orderColumn} = $${paramIndex++} AND p.id < $${paramIndex++}))`;
+            query += ` AND (p.${orderColumn} < ? OR (p.${orderColumn} = ? AND p.id < ?))`;
             params.push(sortValue, sortValue, id);
           } else {
-            query += ` AND (p.${orderColumn} > $${paramIndex++} OR (p.${orderColumn} = $${paramIndex++} AND p.id < $${paramIndex++}))`;
+            query += ` AND (p.${orderColumn} > ? OR (p.${orderColumn} = ? AND p.id < ?))`;
             params.push(sortValue, sortValue, id);
           }
         }
       }
     }
 
-    // Search filter (indexed) - PostgreSQL uses ILIKE for case-insensitive search
+    // Search filter (indexed)
     if (search) {
-      query += ` AND (p.name ILIKE $${paramIndex++} OR p.description ILIKE $${paramIndex++})`;
+      query += ` AND (p.name LIKE ? OR p.description LIKE ?)`;
       params.push(`%${search}%`, `%${search}%`);
     }
 
     // Category filter (indexed)
     if (category) {
-      query += ` AND p.category = $${paramIndex++}`;
+      query += ` AND p.category = ?`;
       params.push(category);
     }
 
     // Price range filter (indexed)
     if (minPrice !== undefined) {
-      query += ` AND p.price >= $${paramIndex++}`;
+      query += ` AND p.price >= ?`;
       params.push(minPrice);
     }
 
     if (maxPrice !== undefined) {
-      query += ` AND p.price <= $${paramIndex++}`;
+      query += ` AND p.price <= ?`;
       params.push(maxPrice);
     }
 
@@ -189,12 +188,11 @@ class ProductService {
     query += ` ORDER BY p.${orderColumn} ${sortOrderForQuery}, p.id ${sortOrderForQuery}`;
     
     // Limit
-    query += ` LIMIT $${paramIndex++}`;
+    query += ` LIMIT ?`;
     params.push(parseInt(limit) + 1); // Fetch one extra to determine if there are more pages
 
-    // Execute query - PostgreSQL returns { rows } directly
-    const result = await db.query(query, params);
-    const rows = result.rows;
+    // Execute query
+    const [rows] = await db.query(query, params);
 
     // For backward pagination, reverse the results
     const results = isBackward ? rows.reverse() : rows;
@@ -235,16 +233,16 @@ class ProductService {
       }
 
       // Query database
-      const result = await db.query(
-        'SELECT * FROM products WHERE id = $1',
+      const [rows] = await db.query(
+        'SELECT * FROM products WHERE id = ?',
         [id]
       );
 
-      if (result.rows.length === 0) {
+      if (rows.length === 0) {
         return null;
       }
 
-      const product = result.rows[0];
+      const product = rows[0];
 
       // Cache result
       await redisClient.setEx(cacheKey, this.cacheTTL, JSON.stringify(product));
@@ -263,16 +261,16 @@ class ProductService {
     try {
       const { name, description, price, category, stock, image_url } = productData;
 
-      const result = await db.query(
+      const [result] = await db.query(
         `INSERT INTO products (name, description, price, category, stock, image_url) 
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [name, description, price, category, stock, image_url]
       );
 
       // Invalidate relevant caches
       await this.invalidateCache();
 
-      return { id: result.rows[0].id, ...productData };
+      return { id: result.insertId, ...productData };
     } catch (error) {
       logger.error('Error creating product:', error);
       throw error;
@@ -287,10 +285,9 @@ class ProductService {
       const updates = [];
       const params = [];
 
-      let paramIndex = 1;
       Object.entries(productData).forEach(([key, value]) => {
         if (value !== undefined) {
-          updates.push(`${key} = $${paramIndex++}`);
+          updates.push(`${key} = ?`);
           params.push(value);
         }
       });
@@ -302,7 +299,7 @@ class ProductService {
       params.push(id);
 
       await db.query(
-        `UPDATE products SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex}`,
+        `UPDATE products SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`,
         params
       );
 
@@ -385,7 +382,7 @@ class ProductService {
    */
   async getStats() {
     try {
-      const result = await db.query(`
+      const [stats] = await db.query(`
         SELECT 
           COUNT(*) as total_products,
           AVG(price) as avg_price,
@@ -395,7 +392,7 @@ class ProductService {
         FROM products
       `);
 
-      return result.rows[0];
+      return stats[0];
     } catch (error) {
       logger.error('Error fetching stats:', error);
       throw error;
