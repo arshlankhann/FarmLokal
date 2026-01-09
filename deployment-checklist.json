@@ -1,0 +1,118 @@
+{
+  "name": "Deploy to Render",
+  "steps": [
+    {
+      "step": 1,
+      "title": "Initialize Git Repository",
+      "commands": [
+        "git init",
+        "git add .",
+        "git commit -m \"Initial commit - FarmLokal application\""
+      ]
+    },
+    {
+      "step": 2,
+      "title": "Create GitHub Repository",
+      "instructions": [
+        "Go to https://github.com/new",
+        "Create a new repository named 'farmlokal'",
+        "Do not initialize with README",
+        "Copy the repository URL"
+      ]
+    },
+    {
+      "step": 3,
+      "title": "Push to GitHub",
+      "commands": [
+        "git remote add origin https://github.com/YOUR_USERNAME/farmlokal.git",
+        "git branch -M main",
+        "git push -u origin main"
+      ]
+    },
+    {
+      "step": 4,
+      "title": "Deploy to Render",
+      "instructions": [
+        "1. Go to https://dashboard.render.com",
+        "2. Sign up or log in",
+        "3. Click 'New +' → 'Blueprint'",
+        "4. Connect your GitHub account",
+        "5. Select the 'farmlokal' repository",
+        "6. Render will detect render.yaml and create services",
+        "7. Click 'Apply' to start deployment"
+      ]
+    },
+    {
+      "step": 5,
+      "title": "Configure Database (Choose One)",
+      "options": [
+        {
+          "option": "A",
+          "name": "Use PlanetScale (MySQL)",
+          "recommended": true,
+          "steps": [
+            "1. Sign up at https://planetscale.com",
+            "2. Create database: farmlokal",
+            "3. Get connection string",
+            "4. In Render backend service → Environment",
+            "5. Add: DATABASE_URL=<planetscale-connection-string>"
+          ]
+        },
+        {
+          "option": "B",
+          "name": "Use Render PostgreSQL",
+          "steps": [
+            "1. Modify code to use PostgreSQL instead of MySQL",
+            "2. Replace mysql2 with pg in package.json",
+            "3. Update database.js config",
+            "4. Deploy and connect"
+          ]
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "title": "Run Migrations",
+      "instructions": [
+        "1. Go to Render dashboard → Your backend service",
+        "2. Click 'Shell' tab",
+        "3. Run: npm run db:migrate",
+        "4. Optionally: npm run db:seed 10000"
+      ]
+    },
+    {
+      "step": 7,
+      "title": "Update Environment Variables",
+      "backend": [
+        "NODE_ENV=production",
+        "PORT=5000",
+        "DB_HOST=<from-database>",
+        "DB_PORT=3306",
+        "DB_USER=<from-database>",
+        "DB_PASSWORD=<from-database>",
+        "DB_NAME=farmlokal",
+        "REDIS_HOST=<from-render-redis>",
+        "REDIS_PORT=<from-render-redis>",
+        "REDIS_PASSWORD=<from-render-redis>"
+      ],
+      "frontend": [
+        "REACT_APP_API_URL=https://your-backend.onrender.com"
+      ]
+    },
+    {
+      "step": 8,
+      "title": "Test Deployment",
+      "tests": [
+        "Backend health: https://farmlokal-backend.onrender.com/health",
+        "Frontend: https://farmlokal-frontend.onrender.com",
+        "API test: https://farmlokal-backend.onrender.com/api/products?limit=5"
+      ]
+    }
+  ],
+  "notes": [
+    "Free tier has cold starts after 15min inactivity",
+    "First request may take 30-60 seconds to wake up",
+    "Upgrade to Starter ($7/mo) to avoid cold starts",
+    "See RENDER_DEPLOYMENT.md for detailed instructions"
+  ]
+}

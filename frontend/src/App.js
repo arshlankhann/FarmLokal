@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './index.css';
 
+// Configure API base URL
+const API_URL = process.env.REACT_APP_API_URL || '';
+
 function App() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +52,7 @@ function App() {
         }
       });
 
-      const response = await axios.get('/api/products', { params });
+      const response = await axios.get(`${API_URL}/api/products`, { params });
 
       if (cursor) {
         setProducts(prev => [...prev, ...response.data.data]);
