@@ -40,7 +40,6 @@ services:
     name: farmlokal-frontend
     runtime: static
     env: static
-    region: oregon
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: ./frontend/build
     envVars:
